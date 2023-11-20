@@ -227,7 +227,7 @@ async function setup() {
       } else if (e.data?.type === 'sources') {
         recieveSources(e.data, () => {});
       }
-    });
+    }, true);
   }
 }
 setup();
