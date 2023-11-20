@@ -1,14 +1,15 @@
 import {IndexedDBManager} from '../network/IndexedDBManager.mjs';
 import {EnvUtils} from '../utils/EnvUtils.mjs';
 const BrowserCanAutoOffloadBlobs = EnvUtils.isChrome();
+const UseIndexedDB = !BrowserCanAutoOffloadBlobs && IndexedDBManager.isSupported();
 export class FSBlob {
   constructor() {
-    if (BrowserCanAutoOffloadBlobs) {
-      this.blobStore = new Map();
-    } else {
+    if (UseIndexedDB) {
       this.indexedDBManager = new IndexedDBManager();
       this.setupPromise = this.indexedDBManager.setup();
       this.blobStorePromises = new Map();
+    } else {
+      this.blobStore = new Map();
     }
     this.blobIndex = 0;
   }
@@ -18,10 +19,10 @@ export class FSBlob {
     return true;
   }
   _saveBlob(identifier, blob) {
-    if (BrowserCanAutoOffloadBlobs) {
-      this.blobStore.set(identifier, blob);
-    } else {
+    if (UseIndexedDB ) {
       this.blobStorePromises.set(identifier, this.saveBlobAsync(identifier, blob));
+    } else {
+      this.blobStore.set(identifier, blob);
     }
   }
   saveBlob(blob) {
@@ -36,11 +37,11 @@ export class FSBlob {
     return identifier;
   }
   async getBlob(identifier) {
-    if (BrowserCanAutoOffloadBlobs) {
-      return this.blobStore.get(identifier);
-    } else {
+    if (UseIndexedDB) {
       await this.blobStorePromises.get(identifier);
       return await this.indexedDBManager.getFile(identifier);
+    } else {
+      return this.blobStore.get(identifier);
     }
   }
   close() {

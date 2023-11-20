@@ -129,7 +129,7 @@ function createKeybindElement(keybind) {
   containerElement.appendChild(keybindInput);
   keybindsList.appendChild(containerElement);
 }
-document.getElementById('welcome').href = chrome?.runtime?.getURL('welcome.html') || './../welcome.html';
+document.getElementById('welcome').href = EnvUtils.isExtension() ? chrome?.runtime?.getURL('welcome.html') : './../welcome.html';
 playMP4URLs.addEventListener('change', () => {
   Options.playMP4URLs = playMP4URLs.checked;
   optionChanged();

@@ -14,7 +14,7 @@ export class EnvUtils {
     return navigator.userAgent.indexOf('Chrome') !== -1;
   }
   static isExtension() {
-    return !!chrome?.extension;
+    return typeof chrome !== 'undefined' && !!chrome?.extension;
   }
   static getVersion() {
     // eslint-disable-next-line prefer-const
