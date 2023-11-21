@@ -22,6 +22,7 @@ export class FastStreamClient extends EventEmitter {
     this.version = EnvUtils.getVersion();
 
     this.options = {
+      autoPlay: false,
       maxSpeed: 300 * 1000 * 1000, // 300 MB/s
       introCutoff: 5 * 60,
       outroCutoff: 5 * 60,
@@ -59,7 +60,7 @@ export class FastStreamClient extends EventEmitter {
     this.subtitleSyncer = new SubtitleSyncer(this);
     this.audioConfigManager = new AudioConfigManager(this);
     this.videoAnalyzer.on(AnalyzerEvents.MATCH, () => {
-      this.interfaceController.updateIntroOutroBar();
+      this.interfaceController.updateSkipSegments();
     });
     this.interfaceController.updateVolumeBar();
 
@@ -198,7 +199,7 @@ export class FastStreamClient extends EventEmitter {
     this.interfaceController.updateProgress();
     this.subtitlesManager.renderSubtitles();
     this.subtitleSyncer.onVideoTimeUpdate();
-    this.interfaceController.updateIntroOutroBar();
+    this.interfaceController.updateSkipSegments();
   }
 
   seekPreview(time) {
@@ -315,6 +316,9 @@ export class FastStreamClient extends EventEmitter {
 
     await this.player.setSource(source);
     this.interfaceController.addVideo(this.player.getVideo());
+    if (this.options.autoPlay) {
+      this.player.getVideo().autoplay = true;
+    }
 
     this.audioContext = new AudioContext();
     this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
@@ -348,6 +352,10 @@ export class FastStreamClient extends EventEmitter {
 
     this.updateCSSFilters();
     this.interfaceController.updateToolVisibility();
+
+    if (this.options.autoPlay) {
+      this.play();
+    }
   }
 
 
@@ -683,9 +691,9 @@ export class FastStreamClient extends EventEmitter {
       this.pause();
     });
 
-    this.context.on(DefaultPlayerEvents.ERROR, (event) => {
+    this.context.on(DefaultPlayerEvents.ERROR, (event, msg) => {
       console.error('ERROR', event);
-      this.failedToLoad(Localize.getMessage('player_error_load'));
+      this.failedToLoad(msg || Localize.getMessage('player_error_load'));
     });
 
     this.context.on(DefaultPlayerEvents.NEED_KEY, (event) => {
