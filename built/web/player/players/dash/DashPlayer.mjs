@@ -33,6 +33,30 @@ export default class DashPlayer extends EventEmitter {
         },
       },
     });
+    this.dash.on(DashJS.MediaPlayer.events.STREAM_INITIALIZED, (e) => {
+      console.log('STREAM_INITIALIZED', navigator.language || 'en');
+      const lang = navigator.language || 'en';
+      this.dash.setInitialMediaSettingsFor('video', {
+        lang,
+      });
+      this.dash.setInitialMediaSettingsFor('audio', {
+        lang,
+      });
+      const vtrack = this.videoTracks.find((track) => {
+        const subsetLength = Math.min(track.lang.length, lang.length);
+        return subsetLength !== 0 && track.lang.substring(0, subsetLength).toLowerCase() === lang.substring(0, subsetLength).toLowerCase();
+      });
+      if (vtrack) {
+        this.dash.setCurrentTrack(vtrack);
+      }
+      const atrack = this.audioTracks.find((track) => {
+        const subsetLength = Math.min(track.lang.length, lang.length);
+        return subsetLength !== 0 && track.lang.substring(0, subsetLength).toLowerCase() === lang.substring(0, subsetLength).toLowerCase();
+      });
+      if (atrack) {
+        this.dash.setCurrentTrack(atrack);
+      }
+    });
     this.dash.on('needkey', (e) => {
       this.emit(DefaultPlayerEvents.NEED_KEY);
     });
@@ -53,23 +77,14 @@ export default class DashPlayer extends EventEmitter {
       this.emit(DefaultPlayerEvents.MANIFEST_PARSED, maxLevel);
     };
     this.dash.on('initialInit', (a) => {
-      a.streamProcessors.forEach((processor) => {
-        const mediaInfo = processor.getMediaInfo();
-        mediaInfo.representations.forEach((rep) => {
-          rep.processor = processor;
-          this.extractFragments(rep);
-        });
-      });
+      this.extractAllFragments();
       initialize();
     });
     this.dash.on('dataUpdateCompleted', (a) => {
-      const processors = this.dash.getStreamController().getActiveStream().getProcessors();
-      processors.forEach((processor) => {
-        const mediaInfo = processor.getMediaInfo();
-        mediaInfo.representations.forEach((rep) => {
-          this.extractFragments(rep);
-        });
-      });
+      this.extractAllFragments();
+    });
+    this.dash.on('currentTrackChanged', (a)=>{
+      this.extractAllFragments();
     });
     // for (let eventName in dashjs.Protection.events) {
     //     let event = dashjs.Protection.events[eventName];
@@ -81,6 +96,16 @@ export default class DashPlayer extends EventEmitter {
     // }
     // eslint-disable-next-line new-cap
     this.dash.extend('XHRLoader', DASHLoaderFactory(this), false);
+  }
+  extractAllFragments() {
+    const processors = this.dash.getStreamController().getActiveStream().getProcessors();
+    processors.forEach((processor) => {
+      const mediaInfo = processor.getMediaInfo();
+      mediaInfo.representations.forEach((rep) => {
+        rep.processor = processor;
+        this.extractFragments(rep);
+      });
+    });
   }
   extractFragments(rep) {
     const processor = rep.processor;
@@ -210,7 +235,16 @@ export default class DashPlayer extends EventEmitter {
   set currentLevel(value) {
     if (typeof value !== 'string') return;
     try {
-      this.dash.setQualityFor('video', parseInt(this.getLevelIndexes(value).repIndex));
+      const tracks = this.dash.getTracksFor('video');
+      const {mediaIndex, repIndex} = this.getLevelIndexes(value);
+      const track = tracks.find((track) => {
+        return track.index === mediaIndex;
+      });
+      if (!track) {
+        console.warn('Could not find video track', value);
+      }
+      this.dash.setCurrentTrack(track);
+      this.dash.setQualityFor('video', repIndex);
     } catch (e) {
       console.warn(e);
     }
@@ -224,10 +258,25 @@ export default class DashPlayer extends EventEmitter {
   }
   set currentAudioLevel(value) {
     if (typeof value !== 'string') return;
-    this.dash.setQualityFor('audio', parseInt(this.getLevelIndexes(value).repIndex));
+    const tracks = this.dash.getTracksFor('audio');
+    const {mediaIndex, repIndex} = this.getLevelIndexes(value);
+    const track = tracks.find((track) => {
+      return track.index === mediaIndex;
+    });
+    if (!track) {
+      console.warn('Could not find audio track', value);
+    }
+    this.dash.setCurrentTrack(track);
+    this.dash.setQualityFor('audio', repIndex);
   }
   get duration() {
     return this.video.duration;
+  }
+  get audioTracks() {
+    return this.dash.getTracksFor('audio');
+  }
+  get videoTracks() {
+    return this.dash.getTracksFor('video');
   }
   get currentFragment() {
     const frags = this.client.getFragments(this.currentLevel);

@@ -128,6 +128,7 @@ export class IndexedDBManager {
       const transaction = db.transaction(storeName, mode);
       let result = Promise.resolve(null);
       transaction.onerror = (event) => {
+        console.error(event);
         reject(event);
       };
       transaction.oncomplete = async (event) => {
@@ -140,6 +141,7 @@ export class IndexedDBManager {
   wrapRequest(request, timeout) {
     return new Promise((resolve, reject)=>{
       request.onerror = (event) => {
+        console.error(event);
         reject(event);
       };
       request.onsuccess = (event) => {

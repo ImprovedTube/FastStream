@@ -10,7 +10,7 @@ let OPTIONS = null;
 if (EnvUtils.isExtension()) {
   chrome.runtime.onMessage.addListener(
       (request, sender, sendResponse) => {
-        if (request.type === 'init') {
+        if (request.type === 'sendFrameId') {
           if (window.parent !== window) {
             window.parent.postMessage({
               type: 'frame',
@@ -227,7 +227,9 @@ async function setup() {
       } else if (e.data?.type === 'sources') {
         recieveSources(e.data, () => {});
       }
-    }, true);
+    });
   }
 }
-setup();
+setup().catch((e)=>{
+  console.error(e);
+});
