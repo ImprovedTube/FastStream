@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>iframe test</title>
+    <script>
+        const queue = [];
+        // listen for messages from the iframe
+        window.addEventListener('message', function(e) {
+            console.log('parent received message!:', e);
+            const el = document.createElement('div');
+            el.textContent = JSON.stringify(e.data);
+            const logEl = document.getElementById('log');
+            if (logEl) {
+                queue.forEach(function(el) {
+                    logEl.appendChild(el);
+                });
+                queue.length = 0;
+                logEl.appendChild(el);
+            } else {
+                queue.push(el);
+            }
+        }, false);
+    </script>
+</head>
+<body>
+    <h1>Message Event Data</h1>
+    <div id="log"></div>
+    <iframe src="iframe.html" width="100%" height="100%"></iframe>
+
+</body>
+</html>
