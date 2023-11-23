@@ -302,6 +302,8 @@ export class FastStreamClient extends EventEmitter {
   async setSource(source) {
     source = source.copy();
 
+    const autoPlay = this.options.autoPlay;
+
     console.log('setSource', source);
     await this.resetPlayer();
     this.source = source;
@@ -316,7 +318,7 @@ export class FastStreamClient extends EventEmitter {
 
     await this.player.setSource(source);
     this.interfaceController.addVideo(this.player.getVideo());
-    if (this.options.autoPlay) {
+    if (autoPlay) {
       this.player.getVideo().autoplay = true;
     }
 
@@ -353,7 +355,7 @@ export class FastStreamClient extends EventEmitter {
     this.updateCSSFilters();
     this.interfaceController.updateToolVisibility();
 
-    if (this.options.autoPlay) {
+    if (autoPlay) {
       this.play();
     }
   }
@@ -961,6 +963,18 @@ export class FastStreamClient extends EventEmitter {
 
   get currentVideo() {
     return this.player?.getVideo() || null;
+  }
+
+  debugDemo() {
+    this.interfaceController.hideControlBar = ()=>{};
+
+    this.videoAnalyzer.introAligner.detectedStartTime = 0;
+    this.videoAnalyzer.introAligner.detectedEndTime = 30;
+    this.videoAnalyzer.introAligner.found = true;
+    this.videoAnalyzer.introAligner.emit('match', true);
+
+    this.currentTime = 6;
+    this.player.getVideo().style.objectFit = 'cover';
   }
 }
 
