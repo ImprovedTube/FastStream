@@ -42,8 +42,8 @@ export class OpenSubtitlesSearch extends EventEmitter {
       if (e.key === 'Escape') {
         this.closeUI();
         e.preventDefault();
+        e.stopPropagation();
       }
-      e.stopPropagation();
     });
     DOMElements.subuiContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();
@@ -62,6 +62,9 @@ export class OpenSubtitlesSearch extends EventEmitter {
     const searchInput = WebUtils.create('input', null, 'text_input');
     searchInput.placeholder = Localize.getMessage('player_opensubtitles_search_placeholder');
     searchInput.classList.add('subtitle-search-input');
+    searchInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     this.subui.searchContainer.appendChild(searchInput);
     this.subui.search = searchInput;
     const searchBtn = WebUtils.create('div', null, 'textbutton subtitle-search-btn');
@@ -72,10 +75,16 @@ export class OpenSubtitlesSearch extends EventEmitter {
     seasonInput.placeholder = Localize.getMessage('player_opensubtitles_seasonnum');
     seasonInput.classList.add('subtitle-season-input');
     seasonInput.style.display = 'none';
+    seasonInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     const episodeInput = WebUtils.create('input', null, 'text_input');
     episodeInput.placeholder = Localize.getMessage('player_opensubtitles_episodenum');
     episodeInput.classList.add('subtitle-episode-input');
     episodeInput.style.display = 'none';
+    episodeInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     const typeSelector = WebUtils.createDropdown('all',
         'Type', {
           'all': Localize.getMessage('player_opensubtitles_type_all'),
@@ -100,10 +109,16 @@ export class OpenSubtitlesSearch extends EventEmitter {
     languageInput.classList.add('subtitle-language-input');
     this.subui.searchContainer.appendChild(languageInput);
     this.subui.languageInput = languageInput;
+    languageInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     const yearInput = WebUtils.create('input', null, 'text_input');
     yearInput.placeholder = Localize.getMessage('player_opensubtitles_year');
     yearInput.classList.add('subtitle-year-input');
     this.subui.searchContainer.appendChild(yearInput);
+    yearInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     const sortSelector = WebUtils.createDropdown('download_count',
         Localize.getMessage('player_opensubtitles_sortby'), {
           'download_count': Localize.getMessage('player_opensubtitles_sortby_downloads'),

@@ -13,8 +13,8 @@ export class OptionsWindow {
       if (e.key === 'Escape') {
         this.closeUI();
         e.preventDefault();
+        e.stopPropagation();
       }
-      e.stopPropagation();
     });
     DOMElements.optionsContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();

@@ -140,7 +140,7 @@ const TranslationMap = {
   "player_savevideo_fail": "Failed to save video!",
   "player_savevideo_failed_ask_archive": "Failed to save video!\nWould you like to archive the player's buffer storage instead?\n- Drag and drop archive files on the player to load it",
   "player_savevideo_complete": "Save complete!",
-  "player_archiver_progress": "Archiving $1",
+  "player_archiver_progress": "Archiving $1%",
   "player_archiver_saved": "Archive saved!",
   "player_quality_current": "(current)",
   "player_buffer_incognito_warning": "Not enough space to predownload in incognito mode, will buffer $1s",

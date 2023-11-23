@@ -64,6 +64,9 @@ export class SourcesBrowser {
         }
       }
     });
+    sourceURL.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+    });
     const sourceHeadersBtn = WebUtils.create('div', null, 'linkui-source-headers-button');
     sourceHeadersBtn.textContent = Localize.getMessage('player_source_headerbtn', [Object.keys(source.headers).length]);
     sourceHeadersBtn.title = Localize.getMessage('player_source_headerbtn_label');
@@ -122,6 +125,9 @@ export class SourcesBrowser {
       source.headers = URLUtils.headersStringToObj(headersInput.value);
       sourceHeadersBtn.textContent = Localize.getMessage('player_source_headerbtn', [Object.keys(source.headers).length]);
       this.updateSources();
+    });
+    headersInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
     });
     headersInput.style.display = 'none';
     sourceContainer.appendChild(headersInput);
@@ -183,8 +189,8 @@ export class SourcesBrowser {
       if (e.key === 'Escape') {
         this.closeUI();
         e.preventDefault();
+        e.stopPropagation();
       }
-      e.stopPropagation();
     });
     DOMElements.linkuiContainer.addEventListener('keyup', (e) => {
       e.stopPropagation();

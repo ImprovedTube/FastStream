@@ -118,6 +118,7 @@ export class InterfaceController {
     this.progressCacheAudio = [];
     this.hasShownSkip = false;
     this.failed = false;
+    this.setStatusMessage('error', null, 'error');
     this.reuseDownloadURL = false;
     if (this.downloadURL) {
       URL.revokeObjectURL(this.downloadURL);
@@ -841,10 +842,15 @@ export class InterfaceController {
   async dumpBuffer(name) {
     const entries = this.client.downloadManager.getCompletedEntries();
     const filestream = streamSaver.createWriteStream(name + '.fsa');
-    await FastStreamArchiveUtils.writeFSAToStream(filestream, this.client.player, entries, (progress)=>{
-      this.setStatusMessage('save-video', Localize.getMessage('player_archiver_progress', [Math.floor(progress * 100)]), 'info');
-    });
-    this.setStatusMessage('save-video', Localize.getMessage('player_archiver_saved'), 'info', 2000);
+    try {
+      await FastStreamArchiveUtils.writeFSAToStream(filestream, this.client.player, entries, (progress)=>{
+        this.setStatusMessage('save-video', Localize.getMessage('player_archiver_progress', [Math.floor(progress * 100)]), 'info');
+      });
+      this.setStatusMessage('save-video', Localize.getMessage('player_archiver_saved'), 'info', 2000);
+    } catch (e) {
+      console.error(e);
+      this.setStatusMessage('save-video', 'Unreachable Error', 'error', 2000);
+    }
   }
   updateMarkers() {
     const pastSeeks = this.client.pastSeeks;
@@ -1116,6 +1122,8 @@ export class InterfaceController {
         });
       });
     }
+    let currentSegment = null;
+    const time = this.client.currentTime;
     skipSegments.forEach((segment) => {
       const segmentElement = document.createElement('div');
       segmentElement.classList.add('skip_segment');
@@ -1123,15 +1131,16 @@ export class InterfaceController {
       segmentElement.style.left = segment.startTime / duration * 100 + '%';
       segmentElement.style.width = (segment.endTime - segment.startTime) / duration * 100 + '%';
       DOMElements.skipSegmentsContainer.appendChild(segmentElement);
+      if (!currentSegment && time >= segment.startTime && time < segment.endTime) {
+        currentSegment = segment;
+        segmentElement.classList.add('active');
+      }
     });
     this.skipSegments = skipSegments;
-    const time = this.client.currentTime;
-    const currentSegment = skipSegments.find((segment) => time >= segment.startTime && time < segment.endTime);
     if (currentSegment) {
       DOMElements.skipButton.style.display = '';
       DOMElements.skipButton.textContent = currentSegment.skipText;
       DOMElements.progressContainer.classList.add('skip_freeze');
-      currentSegment.classList.add('active');
     } else {
       DOMElements.progressContainer.classList.remove('skip_freeze');
       DOMElements.skipButton.style.display = 'none';
