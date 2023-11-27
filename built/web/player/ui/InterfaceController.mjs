@@ -34,6 +34,7 @@ export class InterfaceController {
     this.registerStatusLevel('error');
     this.registerStatusLevel('save-video', 1);
     this.registerStatusLevel('save-screenshot', 1);
+    this.registerStatusLevel('chapter', 2);
     this.setupDOM();
   }
   registerStatusLevel(key, channel) {
@@ -56,6 +57,13 @@ export class InterfaceController {
     level.type = type || 'info';
     level.expiry = expiry ? (Date.now() + expiry) : 0;
     this.updateStatusMessage();
+  }
+  getStatusMessage(key) {
+    const level = this.statusMessages.get(key);
+    if (!level) {
+      throw new Error(`Unknown status level ${key}`);
+    }
+    return level.message;
   }
   updateStatusMessage() {
     const elements = DOMElements.statusMessages;
@@ -119,6 +127,7 @@ export class InterfaceController {
     this.hasShownSkip = false;
     this.failed = false;
     this.setStatusMessage('error', null, 'error');
+    this.setStatusMessage('chapter', null, 'error');
     this.reuseDownloadURL = false;
     if (this.downloadURL) {
       URL.revokeObjectURL(this.downloadURL);
@@ -303,9 +312,11 @@ export class InterfaceController {
     let speed = this.lastSpeed; // bytes per second
     speed = Math.round(speed / 1000 / 1000 * 10) / 10; // MB per second
     if (loaded < total) {
+      this.shownDownloadComplete = false;
       this.setStatusMessage('download', `${this.client.downloadManager.downloaders.length}C ↓${speed}MB/s ${percentDone}%`, 'success');
-    } else {
-      this.setStatusMessage('download', Localize.getMessage('player_fragment_allbuffered'), 'success');
+    } else if (!this.shownDownloadComplete) {
+      this.shownDownloadComplete = true;
+      this.setStatusMessage('download', Localize.getMessage('player_fragment_allbuffered'), 'success', 2000);
     }
     if (failed > 0) {
       DOMElements.resetFailed.style.display = '';
@@ -343,8 +354,11 @@ export class InterfaceController {
       e.stopPropagation();
     });
     DOMElements.videoContainer.addEventListener('dblclick', (e) => {
-      this.hideControlBarOnAction();
-      this.playPauseToggle();
+      if (!this.client.options.clickToPause) {
+        this.playPauseToggle();
+      } else {
+        this.hideControlBarOnAction();
+      }
       e.stopPropagation();
     });
     DOMElements.progressContainer.addEventListener('mousedown', this.onProgressbarMouseDown.bind(this));
@@ -434,6 +448,9 @@ export class InterfaceController {
     DOMElements.videoContainer.addEventListener('click', () => {
       if (this.isBigPlayButtonVisible()) {
         this.playPauseToggle();
+      } else if (this.client.options.clickToPause) {
+        this.playPauseToggle();
+        return;
       }
       this.focusingControls = false;
       this.mouseOverControls = false;
@@ -552,7 +569,7 @@ export class InterfaceController {
       e.stopPropagation();
     });
     WebUtils.setupTabIndex(DOMElements.playbackRate);
-    for (let i = 1; i <= 30; i += 1) {
+    for (let i = 1; i <= 80; i += 1) {
       ((i) => {
         const el = document.createElement('div');
         els.push(el);
@@ -568,7 +585,7 @@ export class InterfaceController {
     this.playbackElements = els;
     DOMElements.playbackRate.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') {
-        this.client.playbackRate = Math.min(3, (this.playbackRate + 1) / 10);
+        this.client.playbackRate = Math.min(8, (this.playbackRate + 1) / 10);
         speedList.scrollTop = els[this.playbackRate - 1].offsetTop - 60;
         e.preventDefault();
         e.stopPropagation();
@@ -973,7 +990,16 @@ export class InterfaceController {
     const currentX = Math.min(Math.max(event.clientX - this.getOffsetLeft(DOMElements.progressContainer), 0), DOMElements.progressContainer.clientWidth);
     const totalWidth = DOMElements.progressContainer.clientWidth;
     const time = this.client.duration * currentX / totalWidth;
-    DOMElements.seekPreviewText.textContent = StringUtils.formatTime(time);
+    const chapter = this.client.chapters.find((chapter) => chapter.startTime <= time && chapter.endTime >= time);
+    let text = '';
+    if (chapter) {
+      text += chapter.name + '\n';
+      DOMElements.seekPreviewVideo.style.bottom = '50px';
+    } else {
+      DOMElements.seekPreviewVideo.style.bottom = '';
+    }
+    text += StringUtils.formatTime(time);
+    DOMElements.seekPreviewText.innerText = text;
     const maxWidth = Math.max(DOMElements.seekPreviewVideo.clientWidth, DOMElements.seekPreview.clientWidth);
     let nudgeAmount = 0;
     if (currentX < maxWidth / 2) {
@@ -1113,15 +1139,13 @@ export class InterfaceController {
         skipText: Localize.getMessage('player_skipoutro'),
       });
     }
-    if (this.client.player?.getSkipSegments) {
-      this.client.player.getSkipSegments().forEach((segment) => {
-        skipSegments.push({
-          ...segment,
-          startTime: Utils.clamp(segment.startTime, 0, duration),
-          endTime: Utils.clamp(segment.endTime, 0, duration),
-        });
+    this.client.skipSegments.forEach((segment) => {
+      skipSegments.push({
+        ...segment,
+        startTime: Utils.clamp(segment.startTime, 0, duration),
+        endTime: Utils.clamp(segment.endTime, 0, duration),
       });
-    }
+    });
     let currentSegment = null;
     const time = this.client.currentTime;
     skipSegments.forEach((segment) => {
@@ -1156,6 +1180,22 @@ export class InterfaceController {
         this.queueControlsHide(5000);
       }
     }
+    const chapters = [];
+    this.client.chapters.forEach((chapter) => {
+      chapters.push({
+        ...chapter,
+        startTime: Utils.clamp(chapter.startTime, 0, duration),
+        endTime: Utils.clamp(chapter.endTime, 0, duration),
+      });
+    });
+    chapters.forEach((chapter) => {
+      if (chapter.startTime !== 0) {
+        const chapterElement = document.createElement('div');
+        chapterElement.classList.add('chapter');
+        chapterElement.style.left = chapter.startTime / duration * 100 + '%';
+        DOMElements.skipSegmentsContainer.appendChild(chapterElement);
+      }
+    });
   }
   updateQualityLevels() {
     const levels = this.client.levels;
@@ -1220,6 +1260,16 @@ export class InterfaceController {
     const duration = this.client.duration;
     DOMElements.currentProgress.style.width = Utils.clamp(this.persistent.currentTime / duration, 0, 1) * 100 + '%';
     DOMElements.duration.textContent = StringUtils.formatTime(this.persistent.currentTime) + ' / ' + StringUtils.formatTime(duration);
+    const chapters = this.client.chapters;
+    if (chapters.length > 0) {
+      const time = this.persistent.currentTime;
+      const chapter = chapters.find((chapter) => chapter.startTime <= time && chapter.endTime >= time);
+      if (chapter) {
+        this.setStatusMessage('chapter', chapter.name, 'info');
+      }
+    } else {
+      this.setStatusMessage('chapter', null, 'info');
+    }
   }
   fullscreenToggle() {
     try {

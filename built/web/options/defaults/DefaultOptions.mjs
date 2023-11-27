@@ -7,6 +7,7 @@ export const DefaultOptions = {
   downloadAll: true,
   freeUnusedChannels: true,
   autoEnableBestSubtitles: false,
+  clickToPause: false,
   autoEnableURLs: [],
   keybinds: DefaultKeybinds,
   videoBrightness: 1,
@@ -18,4 +19,5 @@ export const DefaultOptions = {
   videoHueRotate: 0,
   maxSpeed: 300 * 1000 * 1000,
   seekStepSize: 2,
+  playbackRate: 1,
 };

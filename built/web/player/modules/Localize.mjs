@@ -228,6 +228,8 @@ const TranslationMap = {
   "options_general_stream": "Use player to play HLS/DASH streams when opening playlist URLs (.m3u8/.mpd)",
   "options_general_mp4": "Use player to play MP4 videos when opening video URLs (.mp4)",
   "options_general_seekstep": "Seek keybind base step size (seconds)",
+  "options_general_playbackrate": "Default playback rate",
+  "options_general_clickpause": "Single click toggles play/pause",
   "options_keybinds_header": "Keyboard Shortcuts",
   "options_keybinds_body": "Keybinds are only active when the player is focused.",
   "options_keybinds_reset": "Reset to Defaults",

@@ -10,7 +10,9 @@ let OPTIONS = null;
 if (EnvUtils.isExtension()) {
   chrome.runtime.onMessage.addListener(
       (request, sender, sendResponse) => {
-        if (request.type === 'sendFrameId') {
+        if (request.type === 'keypress') {
+          if (window.fastStream) window.fastStream.keybindManager.handleKeyString(request.key);
+        } else if (request.type === 'sendFrameId') {
           if (window.parent !== window) {
             window.parent.postMessage({
               type: 'frame',
@@ -92,6 +94,9 @@ async function recieveSources(request, sendResponse) {
   }
   if (autoPlaySource) {
     window.fastStream.clearSubtitles();
+  }
+  if (autoPlaySource && autoPlaySource.mode === PlayerModes.ACCELERATED_YT && !URLUtils.is_url_yt_embed(autoPlaySource.url)) {
+    window.fastStream.setAutoPlay(true); // Enable autoplay for yt only. Not embeds.
   }
   sources.forEach((s) => {
     window.fastStream.addSource(new VideoSource(s.url, s.headers, s.mode), s === autoPlaySource);
@@ -179,7 +184,14 @@ async function setup() {
     window.fastStream = new FastStreamClient();
     await window.fastStream.setup();
   }
-  if (OPTIONS && window.fastStream) window.fastStream.setOptions(OPTIONS);
+  if (EnvUtils.isExtension()) {
+    try {
+      OPTIONS = await Utils.getOptionsFromStorage();
+      window.fastStream.setOptions(OPTIONS);
+    } catch (e) {
+      console.error(e);
+    }
+  }
   const urlParams = new URLSearchParams(window.location.search);
   const myParam = urlParams.get('frame_id');
   if (EnvUtils.isExtension()) {

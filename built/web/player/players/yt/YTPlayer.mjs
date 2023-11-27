@@ -83,16 +83,25 @@ export default class YTPlayer extends DashPlayer {
     if (!identifier) {
       identifier = url.pathname.split('/').pop();
     }
-    const videoInfo = await youtube.getInfo(identifier);
-    this.youtube = youtube;
-    this.videoInfo = videoInfo;
-    const manifest = await videoInfo.toDash((url) => {
-      return url;
-    });
-    this.oldSource = source;
-    const uri = 'data:application/dash+xml;charset=utf-8;base64,' + btoa(manifest);
-    this.source = new VideoSource(uri, source.headers, PlayerModes.ACCELERATED_DASH);
-    this.source.identifier = 'yt-' + identifier;
+    try {
+      const videoInfo = await youtube.getInfo(identifier);
+      this.youtube = youtube;
+      this.videoInfo = videoInfo;
+      const manifest = await videoInfo.toDash((url) => {
+        return url;
+      });
+      this.oldSource = source;
+      const blob = new Blob([manifest], {
+        type: 'application/dash+xml',
+      });
+      const uri = URL.createObjectURL(blob);
+      this.source = new VideoSource(uri, source.headers, PlayerModes.ACCELERATED_DASH);
+      this.source.identifier = 'yt-' + identifier;
+    } catch (e) {
+      console.error(e);
+      this.emit(DefaultPlayerEvents.ERROR, e);
+      return;
+    }
     await super.setSource(this.source);
     if (this.videoInfo.captions?.caption_tracks) {
       this.videoInfo.captions.caption_tracks.forEach(async (track)=>{
@@ -104,6 +113,10 @@ export default class YTPlayer extends DashPlayer {
         this.client.loadSubtitleTrack(subTrack, true);
       });
     }
+    this.extractChapters();
+    this.fetchSponsorBlock(identifier);
+  }
+  fetchSponsorBlock(identifier) {
     if (EnvUtils.isExtension()) {
       chrome.runtime.sendMessage({
         type: 'sponsor_block',
@@ -111,7 +124,7 @@ export default class YTPlayer extends DashPlayer {
         videoId: identifier,
       }, (segments)=>{
         if (segments) {
-          this.skipSegments = segments.map((segment) => {
+          this._skipSegments = segments.map((segment) => {
             return {
               startTime: segment.segment[0],
               endTime: segment.segment[1],
@@ -131,8 +144,43 @@ export default class YTPlayer extends DashPlayer {
       });
     }
   }
-  getSkipSegments() {
-    return this.skipSegments || [];
+  extractChapters() {
+    const info = this.videoInfo;
+    const markersMap = info.player_overlays?.decorated_player_bar?.player_bar?.markers_map;
+    const chapters = (
+      markersMap?.get({marker_key: 'AUTO_CHAPTERS'}) ||
+      markersMap?.get({marker_key: 'DESCRIPTION_CHAPTERS'})
+    )?.value.chapters;
+    if (chapters) {
+      this._chapters = [];
+      for (const chapter of chapters) {
+        this._chapters.push({
+          name: chapter?.title?.text || 'Chapter',
+          startTime: chapter.time_range_start_millis / 1000,
+        });
+      }
+      for (let i = 0; i < this._chapters.length; i++) {
+        const chapter = this._chapters[i];
+        const nextChapter = this._chapters[i + 1];
+        if (nextChapter) {
+          chapter.endTime = nextChapter.startTime;
+        } else {
+          chapter.endTime = info.basic_info.duration;
+        }
+      }
+    }
+  }
+  destroy() {
+    if (this.source) {
+      URL.revokeObjectURL(this.source.url);
+    }
+    super.destroy();
+  }
+  get skipSegments() {
+    return this._skipSegments;
+  }
+  get chapters() {
+    return this._chapters;
   }
   getSource() {
     return this.source;
