@@ -31,6 +31,7 @@ export class FastStreamClient extends EventEmitter {
       freeFragments: true,
       downloadAll: false,
       freeUnusedChannels: true,
+      clickToPause: false,
       videoBrightness: 1,
       videoContrast: 1,
       videoSaturation: 1,
@@ -39,6 +40,7 @@ export class FastStreamClient extends EventEmitter {
       videoInvert: 0,
       videoHueRotate: 0,
       seekStepSize: 0.2,
+      defaultPlaybackRate: 1,
     };
     this.persistent = {
       playing: false,
@@ -113,6 +115,7 @@ export class FastStreamClient extends EventEmitter {
     this.options.downloadAll = options.downloadAll;
     this.options.freeUnusedChannels = options.freeUnusedChannels;
     this.options.autoEnableBestSubtitles = options.autoEnableBestSubtitles;
+    this.options.clickToPause = options.clickToPause;
     this.options.maxSpeed = options.maxSpeed;
     this.options.seekStepSize = options.seekStepSize;
 
@@ -123,6 +126,12 @@ export class FastStreamClient extends EventEmitter {
     this.options.videoSepia = options.videoSepia;
     this.options.videoInvert = options.videoInvert;
     this.options.videoHueRotate = options.videoHueRotate;
+
+    if (this.persistent.playbackRate === this.options.defaultPlaybackRate) {
+      this.playbackRate = options.playbackRate;
+    }
+    this.options.defaultPlaybackRate = options.playbackRate;
+
     this.updateCSSFilters();
 
     if (options.keybinds) {
@@ -299,6 +308,11 @@ export class FastStreamClient extends EventEmitter {
     return source;
   }
 
+  setAutoPlay(value) {
+    console.log('setAutoPlay', value);
+    this.options.autoPlay = value;
+  }
+
   async setSource(source) {
     source = source.copy();
 
@@ -318,9 +332,6 @@ export class FastStreamClient extends EventEmitter {
 
     await this.player.setSource(source);
     this.interfaceController.addVideo(this.player.getVideo());
-    if (autoPlay) {
-      this.player.getVideo().autoplay = true;
-    }
 
     this.audioContext = new AudioContext();
     this.audioSource = this.audioContext.createMediaElementSource(this.player.getVideo());
@@ -621,7 +632,6 @@ export class FastStreamClient extends EventEmitter {
 
     promises.push(this.downloadManager.reset());
     this.interfaceController.reset();
-    this.subtitlesManager.clearTracks();
 
     this.persistent.buffering = false;
 
@@ -668,8 +678,12 @@ export class FastStreamClient extends EventEmitter {
 
     });
 
+    let autoPlayTriggered = false;
     this.context.on(DefaultPlayerEvents.CANPLAY, (event) => {
-
+      if (!autoPlayTriggered && this.options.autoPlay && this.persistent.playing === false) {
+        autoPlayTriggered = true;
+        this.play();
+      }
     });
 
     this.context.on(DefaultPlayerEvents.CANPLAYTHROUGH, (event) => {
@@ -963,6 +977,14 @@ export class FastStreamClient extends EventEmitter {
 
   get currentVideo() {
     return this.player?.getVideo() || null;
+  }
+
+  get skipSegments() {
+    return this.player?.skipSegments || [];
+  }
+
+  get chapters() {
+    return this.player?.chapters || [];
   }
 
   debugDemo() {

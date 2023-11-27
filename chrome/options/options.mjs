@@ -15,6 +15,8 @@ const autoEnableURLSInput = document.getElementById('autoEnableURLs');
 const autoSub = document.getElementById('autosub');
 const maxSpeed = document.getElementById('maxspeed');
 const seekStepSize = document.getElementById('seekstepsize');
+const playbackRate = document.getElementById('playbackrate');
+const clickToPause = document.getElementById('clicktopause');
 autoEnableURLSInput.setAttribute('autocapitalize', 'off');
 autoEnableURLSInput.setAttribute('autocomplete', 'off');
 autoEnableURLSInput.setAttribute('autocorrect', 'off');
@@ -42,8 +44,10 @@ async function loadOptions(newOptions) {
   playStreamURLs.checked = !!Options.playStreamURLs;
   playMP4URLs.checked = !!Options.playMP4URLs;
   autoSub.checked = !!Options.autoEnableBestSubtitles;
+  clickToPause.checked = !!Options.clickToPause;
   maxSpeed.value = StringUtils.getSpeedString(Options.maxSpeed);
   seekStepSize.value = Math.round(Options.seekStepSize * 100) / 100;
+  playbackRate.value = Options.playbackRate;
 
   if (Options.keybinds) {
     keybindsList.replaceChildren();
@@ -118,7 +122,7 @@ function createKeybindElement(keybind) {
   const keybindInput = document.createElement('div');
   keybindInput.classList.add('keybind-input');
   keybindInput.tabIndex = 0;
-  keybindInput.name = keybindName;
+  keybindInput.title = keybindName;
   keybindInput.textContent = Options.keybinds[keybind];
 
   keybindInput.addEventListener('keydown', (e) => {
@@ -187,6 +191,11 @@ freeUnusedChannels.addEventListener('change', () => {
   optionChanged();
 });
 
+clickToPause.addEventListener('change', () => {
+  Options.clickToPause = clickToPause.checked;
+  optionChanged();
+});
+
 maxSpeed.addEventListener('change', () => {
   // parse value, number unit/s
   Options.maxSpeed = StringUtils.getSpeedValue(maxSpeed.value);
@@ -196,6 +205,11 @@ maxSpeed.addEventListener('change', () => {
 
 seekStepSize.addEventListener('change', () => {
   Options.seekStepSize = parseFloat(seekStepSize.value);
+  optionChanged();
+});
+
+playbackRate.addEventListener('change', () => {
+  Options.playbackRate = parseFloat(playbackRate.value) || 1;
   optionChanged();
 });
 

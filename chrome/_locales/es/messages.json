@@ -683,6 +683,12 @@
     "options_general_seekstep": {
         "message": "Buscar tamaño de paso base de la tecla de acceso rápido (segundos)"
     },
+    "options_general_playbackrate": {
+        "message": "Velocidad de reproducción predeterminada"
+    },
+    "options_general_clickpause": {
+        "message": "Un solo clic alterna reproducir/pausar"
+    },
     "options_keybinds_header": {
         "message": "Atajos de Teclado"
     },
